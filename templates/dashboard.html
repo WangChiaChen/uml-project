@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <title>案件管理後台</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        .status-new {
+            color: red;
+            font-weight: bold;
+        }
+
+        .status-assigned {
+            color: orange;
+            font-weight: bold;
+        }
+
+        .status-completed {
+            color: green;
+            font-weight: bold;
+        }
+
+        .nav {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="nav">
+        <a href="/">民眾報案</a> | <a href="/dashboard">後台管理</a>
+    </div>
+
+    <h1>📋 案件管理儀表板</h1>
+    <button onclick="loadCases()">重新整理列表</button>
+
+    <table id="casesTable">
+        <thead>
+            <tr>
+                <th>日期</th>
+                <th>地點</th>
+                <th>描述</th>
+                <th>狀態</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+
+    <script>
+        async function loadCases() {
+            const response = await fetch('/cases'); // 呼叫我們剛剛寫的 GET API
+            const cases = await response.json();
+
+            const tbody = document.querySelector('#casesTable tbody');
+            tbody.innerHTML = ""; // 清空舊資料
+
+            cases.forEach(c => {
+                // 處理時間格式 (如果在 Firebase 是 Timestamp 的話)
+                let dateStr = c.reportTime;
+
+                let row = `
+                    <tr>
+                        <td>${dateStr}</td>
+                        <td>${c.location}</td>
+                        <td>${c.description}</td>
+                        <td class="status-${c.status.toLowerCase()}">${c.status}</td>
+                        <td>
+                            ${c.status === 'New' ? `<button onclick="assignTask('${c.id}')">分派任務</button>` : ''}
+                            ${c.status === 'Assigned' ? `<button onclick="processCase('${c.id}')">回報結案</button>` : ''}
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        // 簡單實作：分派任務按鈕功能
+        async function assignTask(caseId) {
+            const unit = prompt("請輸入專責單位 ID (例如: Unit_A):", "Unit_Road_Works");
+            if (!unit) return;
+
+            const response = await fetch('/assign_task', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ caseID: caseId, dedicatedUnitID: unit })
+            });
+            const res = await response.json();
+            if (res.success) { alert("分派成功！"); loadCases(); }
+        }
+
+        // 簡單實作：結案按鈕功能
+        async function processCase(caseId) {
+            const note = prompt("請輸入處理結果:", "已修復完成");
+            if (!note) return;
+
+            const response = await fetch('/process_case', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ caseID: caseId, progressNotes: "處理中", resultDetails: note })
+            });
+            const res = await response.json();
+            if (res.success) { alert("結案成功！"); loadCases(); }
+        }
+
+        // 網頁載入時自動讀取
+        window.onload = loadCases;
+    </script>
+</body>
+
+</html>
