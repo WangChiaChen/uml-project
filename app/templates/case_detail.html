@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+<h3>案件 {{ case.case_id }}</h3>
+<p><b>類型：</b>{{ case.event_type }}　<b>狀態：</b>{{ case.status }}</p>
+<p><b>地點：</b>{{ case.location_text }} ({{ case.latitude }}, {{ case.longitude }})</p>
+<p><b>描述：</b>{{ case.description }}</p>
+<div class="row">
+  {% for m in case.media_files %}
+    <div class="col-md-3 mb-3">
+      {% if m.file_type == 'image' %}
+        <img class="img-fluid" src="{{ url_for('uploaded_file', filename=m.file_path) }}">
+      {% else %}
+        <video controls width="100%"><source src="{{ url_for('uploaded_file', filename=m.file_path) }}"></video>
+      {% endif %}
+    </div>
+  {% endfor %}
+</div>
+{% if current_user.id == case.user_id and case.status in ['draft','submitted'] %}
+  <a class="btn btn-warning" href="{{ url_for('case_edit', case_id=case.case_id) }}">更新/取消</a>
+{% endif %}
+
+<hr>
+<h5>回饋評價</h5>
+<form method="post" action="{{ url_for('case_feedback', case_id=case.case_id) }}">
+  <div class="mb-2"><label class="form-label">評分(1-5)</label><input type="number" min="1" max="5" name="rating" class="form-control" required></div>
+  <div class="mb-2"><label class="form-label">評語</label><textarea name="comments" class="form-control"></textarea></div>
+  <button class="btn btn-success">送出評價</button>
+</form>
+{% endblock %}

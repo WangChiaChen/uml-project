@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<h3>編輯案件 {{ case.case_id }}</h3>
+
+<form method="post">
+  <div class="mb-3">
+    <label class="form-label">事件描述</label>
+    <textarea class="form-control" name="description">{{ case.description }}</textarea>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">地點</label>
+    <input class="form-control" name="location_text" value="{{ case.location_text }}">
+  </div>
+  <div class="mb-3">
+    <label class="form-label">緯度</label>
+    <input class="form-control" name="latitude" value="{{ case.latitude }}">
+  </div>
+  <div class="mb-3">
+    <label class="form-label">經度</label>
+    <input class="form-control" name="longitude" value="{{ case.longitude }}">
+  </div>
+  <div class="mb-3">
+    <button class="btn btn-primary" type="submit">更新</button>
+    <button class="btn btn-danger" type="submit" name="action" value="cancel">取消案件</button>
+  </div>
+</form>
+{% endblock %}
