@@ -45,7 +45,6 @@
             background-color: #eff6ff;
         }
 
-        /* Tab active state */
         .tab-active {
             color: #2563eb;
             border-bottom: 2px solid #2563eb;
@@ -105,7 +104,7 @@
             </div>
         </div>
 
-        <div class="flex border-b border-gray-200">
+        <div class="flex border-b border-gray-200 flex-shrink-0">
             <button onclick="switchTab('all')" id="tab-all" class="flex-1 py-3 text-sm transition-colors tab-active">
                 所有案件 <span id="count-all"
                     class="bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full text-xs ml-1">0</span>
@@ -116,13 +115,21 @@
             </button>
         </div>
 
+        <div class="p-3 bg-white border-b border-gray-100 flex-shrink-0">
+            <div class="relative">
+                <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                <input type="text" id="searchInput" onkeyup="filterAndRender()" placeholder="搜尋地點、描述或類別..."
+                    class="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+            </div>
+        </div>
+
         <div id="feedList" class="flex-1 overflow-y-auto p-3 space-y-3 custom-scroll bg-gray-50">
             <div class="flex flex-col items-center justify-center h-40 text-gray-400">
                 <i class="fas fa-spinner fa-spin mb-2"></i> 資料讀取中...
             </div>
         </div>
 
-        <div class="p-4 border-t border-gray-100 bg-white shadow-[0_-5px_15px_rgba(0,0,0,0.05)]">
+        <div class="p-4 border-t border-gray-100 bg-white shadow-[0_-5px_15px_rgba(0,0,0,0.05)] flex-shrink-0">
             <button onclick="openReportSheet()"
                 class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-transform">
                 <i class="fas fa-camera"></i> 我要報案
@@ -205,10 +212,9 @@
         let userMarker = null, tempMarker = null;
         let markersGroup = L.layerGroup().addTo(map);
 
-        // 取得當前使用者與資料儲存
         const currentUser = "{{ username }}";
         let allReports = [];
-        let currentFilter = 'all'; // 'all' or 'my'
+        let currentFilter = 'all';
 
         async function getAddress(lat, lng) {
             try {
@@ -230,7 +236,6 @@
                 const res = await fetch('/api/reports');
                 allReports = await res.json();
 
-                // 更新計數
                 const myCount = allReports.filter(c => c.reporter === currentUser).length;
                 document.getElementById('count-all').innerText = allReports.length;
                 document.getElementById('count-my').innerText = myCount;
@@ -239,7 +244,6 @@
             } catch (error) { console.error("載入失敗", error); }
         }
 
-        // 切換 Tab 邏輯
         function switchTab(tab) {
             currentFilter = tab;
             document.getElementById('tab-all').className = `flex-1 py-3 text-sm transition-colors ${tab === 'all' ? 'tab-active' : 'tab-inactive'}`;
@@ -247,13 +251,38 @@
             filterAndRender();
         }
 
+        // 🔄 核心修改：結合 Tab 與 關鍵字搜尋
         function filterAndRender() {
+            const keyword = document.getElementById('searchInput').value.toLowerCase();
             let filtered = allReports;
+
+            // 1. 先篩選 Tab
             if (currentFilter === 'my') {
-                filtered = allReports.filter(c => c.reporter === currentUser);
+                filtered = filtered.filter(c => c.reporter === currentUser);
             }
+
+            // 2. 再篩選 關鍵字
+            if (keyword) {
+                filtered = filtered.filter(c =>
+                    (c.description && c.description.toLowerCase().includes(keyword)) ||
+                    (c.category && c.category.toLowerCase().includes(keyword)) ||
+                    (c.status && translateStatus(c.status).includes(keyword))
+                );
+            }
+
             renderFeed(filtered);
             renderMap(filtered);
+        }
+
+        function translateStatus(status) {
+            const map = {
+                'pending': '待處理',
+                'verified': '已核准',
+                'in_progress': '維修中',
+                'completed': '已結案',
+                'rejected': '已駁回'
+            };
+            return map[status] || status;
         }
 
         function renderFeed(reports) {
@@ -261,7 +290,7 @@
             container.innerHTML = '';
 
             if (reports.length === 0) {
-                container.innerHTML = `<div class="flex flex-col items-center justify-center h-64 text-gray-400"><i class="fas fa-folder-open text-4xl mb-3 opacity-30"></i><p>這裡沒有案件</p></div>`;
+                container.innerHTML = `<div class="flex flex-col items-center justify-center h-64 text-gray-400"><i class="fas fa-folder-open text-4xl mb-3 opacity-30"></i><p>沒有符合的案件</p></div>`;
                 return;
             }
 
