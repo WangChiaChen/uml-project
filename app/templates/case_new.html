@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+<h3>通報事件</h3>
+<form method="post" enctype="multipart/form-data">
+  <div class="mb-3">
+    <label class="form-label">事件類型</label>
+    <select name="event_type" class="form-select" required>
+      <option value="">請選擇</option>
+      <option>交通事故</option>
+      <option>路面塌陷</option>
+      <option>刑案</option>
+    </select>
+  </div>
+  <div class="mb-3"><label class="form-label">事件描述</label><textarea name="description" class="form-control" required></textarea></div>
+  <div class="mb-3"><label class="form-label">地點文字</label><input name="location_text" id="location_text" class="form-control"></div>
+  <div class="row">
+    <div class="col"><label class="form-label">緯度</label><input name="latitude" id="latitude" class="form-control"></div>
+    <div class="col"><label class="form-label">經度</label><input name="longitude" id="longitude" class="form-control"></div>
+  </div>
+  <div id="map" style="height:300px" class="my-3 border"></div>
+  <div class="mb-3"><label class="form-label">發生時間</label><input type="datetime-local" name="incident_time" class="form-control"></div>
+  <div class="mb-3"><label class="form-label">上傳照片/影片</label><input type="file" name="media_files" multiple class="form-control"></div>
+  <button class="btn btn-primary">送出</button>
+</form>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script>
+  let map = L.map('map').setView([25.043,121.525], 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
+  let marker = null;
+  function setLatLng(lat,lng){
+    document.getElementById('latitude').value = lat.toFixed(6);
+    document.getElementById('longitude').value = lng.toFixed(6);
+    if(marker){ map.removeLayer(marker); }
+    marker = L.marker([lat,lng]).addTo(map);
+  }
+  map.on('click',e => setLatLng(e.latlng.lat, e.latlng.lng));
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(pos=>{
+      setLatLng(pos.coords.latitude, pos.coords.longitude);
+      map.setView([pos.coords.latitude, pos.coords.longitude], 16);
+    });
+  }
+</script>
+{% endblock %}

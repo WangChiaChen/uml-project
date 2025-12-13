@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block content %}
+<h3 class="mb-3">管理後台</h3>
+
+<!-- 使用者清單 -->
+<div class="card mb-4">
+  <div class="card-header bg-dark text-white">使用者管理</div>
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table table-striped table-hover">
+        <thead class="table-dark">
+          <tr>
+            <th>ID</th>
+            <th>帳號</th>
+            <th>Email</th>
+            <th>角色</th>
+            <th>建立時間</th>
+            <th>狀態</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in users %}
+          <tr>
+            <td>{{ u.id }}</td>
+            <td>{{ u.username }}</td>
+            <td>{{ u.email }}</td>
+            <td>{{ u.role }}</td>
+            <td>{{ u.created_at.strftime('%Y/%m/%d %H:%M') if u.created_at else '' }}</td>
+            <td>
+              {% if u.is_active %}
+                <span class="badge bg-success">啟用</span>
+              {% else %}
+                <span class="badge bg-secondary">停權</span>
+              {% endif %}
+            </td>
+            <td>
+              <!-- 只保留停權按鈕 -->
+              <form method="post" action="{{ url_for('admin_dashboard') }}" class="d-inline">
+                <input type="hidden" name="user_id" value="{{ u.id }}">
+                <button class="btn btn-sm btn-warning" name="action" value="suspend_user">停權</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- 案件清單 -->
+<div class="card mb-4">
+  <div class="card-header bg-dark text-white">案件管理</div>
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table table-striped table-hover">
+        <thead class="table-dark">
+          <tr>
+            <th>案件編號</th>
+            <th>類型</th>
+            <th>地點</th>
+            <th>狀態</th>
+            <th>時間</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in cases %}
+          <tr>
+            <td>{{ c.case_id }}</td>
+            <td>{{ c.event_type }}</td>
+            <td>{{ c.location_text }}</td>
+            <td>{{ c.status }}</td>
+            <td>{{ c.report_time.strftime('%Y/%m/%d %H:%M') }}</td>
+            <td>
+              <a class="btn btn-sm btn-outline-primary" href="{{ url_for('case_detail', case_id=c.case_id) }}">詳情</a>
+              <form method="post" action="{{ url_for('admin_case_review', case_id=c.case_id) }}" class="d-inline">
+                <button class="btn btn-sm btn-success" name="action" value="accept">受理</button>
+                <button class="btn btn-sm btn-info" name="action" value="complete">完成</button>
+                <button class="btn btn-sm btn-danger" name="action" value="mark_fake">標記不實</button>
+              </form>
+              <!-- 分派單位 -->
+              <form method="post" action="{{ url_for('admin_case_review', case_id=c.case_id) }}" class="d-inline">
+                <select name="unit_id" class="form-select form-select-sm d-inline w-auto">
+                  {% for u in units %}
+                    <option value="{{ u.id }}">{{ u.unit_name }}</option>
+                  {% endfor %}
+                </select>
+                <button class="btn btn-sm btn-primary" name="action" value="assign">分派</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- 處理單位管理 -->
+<div class="card">
+  <div class="card-header bg-dark text-white">處理單位管理</div>
+  <div class="card-body">
+    <form method="post" action="{{ url_for('admin_dashboard') }}" class="row g-2">
+      <div class="col-md-6">
+        <input class="form-control" name="unit_name" placeholder="新增單位名稱">
+      </div>
+      <div class="col-md-3">
+        <button class="btn btn-primary w-100" name="action" value="create_unit">新增單位</button>
+      </div>
+    </form>
+    <ul class="list-group mt-3">
+      {% for u in units %}
+        <li class="list-group-item">{{ u.unit_name }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+{% endblock %}

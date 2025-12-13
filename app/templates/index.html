@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block content %}
+<h3>案件列表</h3>
+<form class="row g-2 mb-3">
+  <div class="col-auto">
+    <input class="form-control" name="q" placeholder="關鍵字/地點/編號" value="{{ q }}">
+  </div>
+  <div class="col-auto">
+    <select class="form-select" name="event_type">
+      <option value="">事件類型</option>
+      <option value="交通事故" {% if event_type=='交通事故' %}selected{% endif %}>交通事故</option>
+      <option value="路面塌陷" {% if event_type=='路面塌陷' %}selected{% endif %}>路面塌陷</option>
+      <option value="刑案" {% if event_type=='刑案' %}selected{% endif %}>刑案</option>
+    </select>
+  </div>
+  <div class="col-auto">
+    <button class="btn btn-primary">查詢</button>
+  </div>
+</form>
+
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>編號</th>
+      <th>類型</th>
+      <th>地點</th>
+      <th>狀態</th>
+      <th>時間</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for c in cases %}
+    <tr>
+      <td>{{ c.case_id }}</td>
+      <td>{{ c.event_type }}</td>
+      <td>{{ c.location_text }}</td>
+      <td>{{ c.status }}</td>
+      <td>{{ c.report_time.strftime('%Y/%m/%d %H:%M') }}</td>
+      <td>
+        <a class="btn btn-sm btn-outline-primary" href="{{ url_for('case_detail', case_id=c.case_id) }}">詳情</a>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
