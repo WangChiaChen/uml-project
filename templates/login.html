@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登入 - Road Justice</title>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f3f4f6;
+            margin: 0;
+        }
+
+        .card {
+            background: white;
+            padding: 2rem;
+            rounded: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #111827;
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #374151;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        input {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            box-sizing: border-box;
+        }
+
+        button {
+            width: 100%;
+            padding: 0.75rem;
+            background-color: #0f172a;
+            color: white;
+            border: none;
+            border-radius: 0.375rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 1rem;
+        }
+
+        button:hover {
+            background-color: #1e293b;
+        }
+
+        .switch-btn {
+            background: none;
+            color: #2563eb;
+            text-decoration: underline;
+            margin-top: 10px;
+            font-size: 0.875rem;
+            width: auto;
+            padding: 0;
+        }
+
+        .switch-btn:hover {
+            background: none;
+            color: #1d4ed8;
+        }
+
+        #message {
+            color: red;
+            text-align: center;
+            margin-top: 1rem;
+            font-size: 0.875rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="card">
+        <h1 id="title">系統登入</h1>
+        <div class="form-group">
+            <label>帳號 (Username)</label>
+            <input type="text" id="username" required>
+        </div>
+        <div class="form-group">
+            <label>密碼 (Password)</label>
+            <input type="password" id="password" required>
+        </div>
+        <button onclick="handleAuth()" id="actionBtn">登入</button>
+        <div style="text-align: center;">
+            <button class="switch-btn" onclick="toggleMode()" id="toggleBtn">沒有帳號？註冊</button>
+        </div>
+        <p id="message"></p>
+    </div>
+
+    <script>
+        let isLogin = true;
+
+        function toggleMode() {
+            isLogin = !isLogin;
+            document.getElementById('title').innerText = isLogin ? "系統登入" : "註冊帳號";
+            document.getElementById('actionBtn').innerText = isLogin ? "登入" : "註冊";
+            document.getElementById('toggleBtn').innerText = isLogin ? "沒有帳號？註冊" : "已有帳號？登入";
+            document.getElementById('message').innerText = "";
+        }
+
+        async function handleAuth() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const endpoint = isLogin ? '/api/login' : '/api/register';
+
+            if (!username || !password) {
+                document.getElementById('message').innerText = "請輸入帳號密碼";
+                return;
+            }
+
+            try {
+                const res = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    if (isLogin) {
+                        window.location.href = "/"; // 登入成功，跳轉回主頁
+                    } else {
+                        alert("註冊成功，請登入！");
+                        toggleMode();
+                    }
+                } else {
+                    document.getElementById('message').innerText = data.error || "操作失敗";
+                }
+            } catch (e) {
+                document.getElementById('message').innerText = "連線錯誤";
+            }
+        }
+    </script>
+</body>
+
+</html>
