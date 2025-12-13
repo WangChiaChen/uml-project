@@ -73,12 +73,29 @@ def login_page():
 
 @app.route('/admin')
 def admin_page():
-    if 'user' not in session: return redirect('/login')
+    # 1. 先檢查有沒有登入
+    if 'user' not in session:
+        return redirect('/login')
+    
+    # 2. 檢查登入的人是不是 '333'
+    if session['user'] != '333':
+        # 如果不是，就顯示錯誤訊息
+        return "<h1>⛔ 權限不足：您不是管理員</h1><p>此頁面僅限帳號 333 訪問</p><a href='/'>回首頁</a>", 403
+        
     return render_template('admin.html')
 
+# 修改後的：維修團隊 (只允許 333)
 @app.route('/crew')
 def crew_page():
-    if 'user' not in session: return redirect('/login')
+    # 1. 先檢查有沒有登入
+    if 'user' not in session:
+        return redirect('/login')
+
+    # 2. 檢查登入的人是不是 '333'
+    if session['user'] != '333':
+        # 如果不是，就顯示錯誤訊息
+        return "<h1>⛔ 權限不足：您不是維修人員</h1><p>此頁面僅限帳號 333 訪問</p><a href='/'>回首頁</a>", 403
+
     return render_template('crew.html')
 
 # ==========================================
