@@ -1,64 +1,119 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
     <title>路見不平 - 即時通報系統</title>
-    
+
     <script src="https://cdn.tailwindcss.com"></script>
-    
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Noto+Sans+TC:wght@400;500;700&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
-        body { font-family: 'Inter', 'Noto Sans TC', sans-serif; }
-        .leaflet-control-zoom { display: none; }
-        
-        /* 美化捲軸 */
-        .custom-scroll::-webkit-scrollbar { width: 6px; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 10px; }
-        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
-        
-        /* 卡片特效 */
-        .card-hover:hover { transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .active-card { border-left: 4px solid #2563eb; background-color: #eff6ff; }
+        body {
+            font-family: 'Inter', 'Noto Sans TC', sans-serif;
+        }
+
+        .leaflet-control-zoom {
+            display: none;
+        }
+
+        .custom-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 10px;
+        }
+
+        .custom-scroll::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .active-card {
+            border-left: 4px solid #2563eb;
+            background-color: #eff6ff;
+        }
+
+        /* Tab active state */
+        .tab-active {
+            color: #2563eb;
+            border-bottom: 2px solid #2563eb;
+            font-weight: bold;
+        }
+
+        .tab-inactive {
+            color: #6b7280;
+            border-bottom: 2px solid transparent;
+        }
     </style>
 </head>
 
 <body class="h-screen w-screen overflow-hidden bg-gray-100 flex flex-col md:flex-row">
 
-    <div class="w-full md:w-[400px] h-[45vh] md:h-full bg-white flex flex-col shadow-xl z-20 order-2 md:order-1 relative border-r border-gray-200">
-        
+    <div
+        class="w-full md:w-[400px] h-[50vh] md:h-full bg-white flex flex-col shadow-xl z-20 order-2 md:order-1 relative border-r border-gray-200">
+
         <div class="p-4 border-b border-gray-100 bg-white flex justify-between items-center flex-shrink-0">
             <div class="flex items-center gap-3">
                 {% if username %}
-                    <div class="flex items-center gap-2 group cursor-pointer" onclick="if(confirm('確定要登出嗎？')) location.href='/logout'" title="點擊登出">
-                        <div class="w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold uppercase text-lg">
-                            {{ username[0] }}
-                        </div>
-                        <div>
-                            <p class="text-xs text-gray-500">Hi, 歡迎回來</p>
-                            <h2 class="text-sm font-bold text-gray-800">{{ username }}</h2>
-                        </div>
+                <div class="flex items-center gap-2 group cursor-pointer"
+                    onclick="if(confirm('確定要登出嗎？')) location.href='/logout'">
+                    <div
+                        class="w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold uppercase text-lg">
+                        {{ username[0] }}
                     </div>
+                    <div>
+                        <p class="text-xs text-gray-500">Hi, 歡迎回來</p>
+                        <h2 class="text-sm font-bold text-gray-800">{{ username }}</h2>
+                    </div>
+                </div>
                 {% else %}
-                    <button onclick="location.href='/login'" class="flex items-center gap-2 text-gray-600 hover:text-blue-600">
-                        <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
-                            <i class="fas fa-user"></i>
-                        </div>
-                        <div class="text-left">
-                            <p class="text-xs text-gray-500">訪客</p>
-                            <h2 class="text-sm font-bold">登入 / 註冊</h2>
-                        </div>
-                    </button>
+                <button onclick="location.href='/login'"
+                    class="flex items-center gap-2 text-gray-600 hover:text-blue-600">
+                    <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center"><i
+                            class="fas fa-user"></i></div>
+                    <div class="text-left">
+                        <p class="text-xs text-gray-500">訪客</p>
+                        <h2 class="text-sm font-bold">登入 / 註冊</h2>
+                    </div>
+                </button>
                 {% endif %}
             </div>
 
-            <div class="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs font-bold" id="caseCount">
-                ...
+            <div class="flex gap-2">
+                <a href="/admin"
+                    class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600"
+                    title="管理後台">
+                    <i class="fas fa-user-shield"></i>
+                </a>
+                <a href="/crew"
+                    class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600"
+                    title="維修團隊">
+                    <i class="fas fa-hard-hat"></i>
+                </a>
             </div>
+        </div>
+
+        <div class="flex border-b border-gray-200">
+            <button onclick="switchTab('all')" id="tab-all" class="flex-1 py-3 text-sm transition-colors tab-active">
+                所有案件 <span id="count-all"
+                    class="bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full text-xs ml-1">0</span>
+            </button>
+            <button onclick="switchTab('my')" id="tab-my" class="flex-1 py-3 text-sm transition-colors tab-inactive">
+                我的案件 <span id="count-my"
+                    class="bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full text-xs ml-1">0</span>
+            </button>
         </div>
 
         <div id="feedList" class="flex-1 overflow-y-auto p-3 space-y-3 custom-scroll bg-gray-50">
@@ -68,79 +123,93 @@
         </div>
 
         <div class="p-4 border-t border-gray-100 bg-white shadow-[0_-5px_15px_rgba(0,0,0,0.05)]">
-            <button onclick="openReportSheet()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-transform">
-                <i class="fas fa-camera"></i>
-                我要報案
+            <button onclick="openReportSheet()"
+                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-transform">
+                <i class="fas fa-camera"></i> 我要報案
             </button>
         </div>
     </div>
 
-    <div class="flex-1 relative order-1 md:order-2 h-[55vh] md:h-full">
+    <div class="flex-1 relative order-1 md:order-2 h-[50vh] md:h-full">
         <div id="map" class="absolute inset-0 z-0"></div>
-        
         <div class="absolute top-4 right-4 z-10 flex flex-col gap-2">
-            <button onclick="locateUser()" class="bg-white w-10 h-10 rounded-lg shadow-md text-gray-600 hover:text-blue-600 flex items-center justify-center transition-colors" title="定位我的位置">
+            <button onclick="locateUser()"
+                class="bg-white w-10 h-10 rounded-lg shadow-md text-gray-600 hover:text-blue-600 flex items-center justify-center transition-colors"
+                title="定位我的位置">
                 <i class="fas fa-crosshairs text-lg"></i>
             </button>
         </div>
     </div>
 
-    <div id="reportSheet" class="absolute inset-0 z-50 bg-black/50 hidden flex items-end md:items-center justify-center p-0 md:p-4 backdrop-blur-sm">
-        <div class="bg-white w-full md:w-[500px] h-[85vh] md:h-auto md:max-h-[90vh] rounded-t-2xl md:rounded-2xl shadow-2xl flex flex-col transform transition-transform duration-300 translate-y-full md:translate-y-0" id="sheetContent">
-            
+    <div id="reportSheet"
+        class="absolute inset-0 z-50 bg-black/50 hidden flex items-end md:items-center justify-center p-0 md:p-4 backdrop-blur-sm">
+        <div class="bg-white w-full md:w-[500px] h-[85vh] md:h-auto md:max-h-[90vh] rounded-t-2xl md:rounded-2xl shadow-2xl flex flex-col transform transition-transform duration-300 translate-y-full md:translate-y-0"
+            id="sheetContent">
+
             <div class="p-5 border-b flex justify-between items-center bg-gray-50 rounded-t-2xl">
                 <h2 class="text-xl font-bold text-gray-800">新增通報</h2>
-                <button onclick="closeReportSheet()" class="w-8 h-8 rounded-full bg-white text-gray-400 hover:text-gray-600 shadow-sm flex items-center justify-center"><i class="fas fa-times"></i></button>
+                <button onclick="closeReportSheet()"
+                    class="w-8 h-8 rounded-full bg-white text-gray-400 hover:text-gray-600 shadow-sm flex items-center justify-center"><i
+                        class="fas fa-times"></i></button>
             </div>
 
             <div class="p-6 overflow-y-auto custom-scroll space-y-5">
                 <div>
                     <label class="block text-sm font-bold text-gray-700 mb-2">📍 事發地點</label>
                     <div class="relative">
-                        <input type="text" id="locationInput" readonly class="w-full bg-blue-50 border border-blue-100 rounded-xl p-3 text-blue-800 font-medium focus:outline-none" placeholder="請在地圖上點選位置...">
-                        <div class="absolute right-3 top-3 text-blue-500 animate-pulse hidden" id="locLoading"><i class="fas fa-sync fa-spin"></i></div>
+                        <input type="text" id="locationInput" readonly
+                            class="w-full bg-blue-50 border border-blue-100 rounded-xl p-3 text-blue-800 font-medium focus:outline-none"
+                            placeholder="請在地圖上點選位置...">
+                        <div class="absolute right-3 top-3 text-blue-500 animate-pulse hidden" id="locLoading"><i
+                                class="fas fa-sync fa-spin"></i></div>
                     </div>
                     <input type="hidden" id="latInput"><input type="hidden" id="lngInput">
                     <p class="text-xs text-gray-400 mt-1">* 若地址不準確，以地圖標記為準</p>
                 </div>
-
                 <div>
                     <label class="block text-sm font-bold text-gray-700 mb-2">📷 現場照片</label>
-                    <label class="block w-full h-48 border-2 border-dashed border-gray-300 rounded-xl relative cursor-pointer hover:bg-gray-50 transition-colors group">
+                    <label
+                        class="block w-full h-48 border-2 border-dashed border-gray-300 rounded-xl relative cursor-pointer hover:bg-gray-50 transition-colors group">
                         <img id="imagePreview" class="absolute inset-0 w-full h-full object-cover rounded-xl hidden">
-                        <div id="uploadPlaceholder" class="absolute inset-0 flex flex-col items-center justify-center text-gray-400 group-hover:text-blue-500">
-                            <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-2 group-hover:bg-blue-100 transition-colors">
-                                <i class="fas fa-camera text-xl"></i>
-                            </div>
+                        <div id="uploadPlaceholder"
+                            class="absolute inset-0 flex flex-col items-center justify-center text-gray-400 group-hover:text-blue-500">
+                            <div
+                                class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-2 group-hover:bg-blue-100 transition-colors">
+                                <i class="fas fa-camera text-xl"></i></div>
                             <span class="text-sm font-medium">點擊拍攝或上傳照片</span>
                         </div>
-                        <input type="file" id="imageInput" class="hidden" accept="image/*" onchange="previewImage(this)">
+                        <input type="file" id="imageInput" class="hidden" accept="image/*"
+                            onchange="previewImage(this)">
                     </label>
                 </div>
-
                 <div>
                     <label class="block text-sm font-bold text-gray-700 mb-2">📝 狀況描述</label>
-                    <textarea id="description" rows="3" class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none" placeholder="例如：路面有大坑洞，經過時危險..."></textarea>
+                    <textarea id="description" rows="3"
+                        class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none"
+                        placeholder="例如：路面有大坑洞，經過時危險..."></textarea>
                 </div>
             </div>
 
             <div class="p-5 border-t bg-gray-50 rounded-b-2xl">
-                <button onclick="submitReport()" id="submitBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg transition-all active:scale-[0.98]">確認送出通報</button>
+                <button onclick="submitReport()" id="submitBtn"
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg transition-all active:scale-[0.98]">確認送出通報</button>
             </div>
         </div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // 1. 初始化地圖
         const map = L.map('map', { zoomControl: false }).setView([24.1446, 120.6839], 13);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-        let userMarker = null;
-        let tempMarker = null;
+        let userMarker = null, tempMarker = null;
         let markersGroup = L.layerGroup().addTo(map);
 
-        // 2. 核心：逆向地理編碼 API
+        // 取得當前使用者與資料儲存
+        const currentUser = "{{ username }}";
+        let allReports = [];
+        let currentFilter = 'all'; // 'all' or 'my'
+
         async function getAddress(lat, lng) {
             try {
                 document.getElementById('locLoading').classList.remove('hidden');
@@ -148,70 +217,80 @@
                 const res = await fetch(url);
                 const data = await res.json();
                 document.getElementById('locLoading').classList.add('hidden');
-                
-                // 簡化地址顯示 (去掉郵遞區號與國家)
                 let addr = data.display_name || "未知地點";
-                addr = addr.split(',').slice(0, 3).join(''); // 取前幾段比較重要的資訊
-                return addr;
+                return addr.split(',').slice(0, 3).join('');
             } catch (e) {
                 document.getElementById('locLoading').classList.add('hidden');
                 return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
             }
         }
 
-        // 3. 載入資料
         async function loadData() {
             try {
                 const res = await fetch('/api/reports');
-                const reports = await res.json();
-                document.getElementById('caseCount').innerText = `${reports.length} 件`;
-                renderFeed(reports);
-                renderMap(reports);
+                allReports = await res.json();
+
+                // 更新計數
+                const myCount = allReports.filter(c => c.reporter === currentUser).length;
+                document.getElementById('count-all').innerText = allReports.length;
+                document.getElementById('count-my').innerText = myCount;
+
+                filterAndRender();
             } catch (error) { console.error("載入失敗", error); }
         }
 
-        // 4. 渲染列表
+        // 切換 Tab 邏輯
+        function switchTab(tab) {
+            currentFilter = tab;
+            document.getElementById('tab-all').className = `flex-1 py-3 text-sm transition-colors ${tab === 'all' ? 'tab-active' : 'tab-inactive'}`;
+            document.getElementById('tab-my').className = `flex-1 py-3 text-sm transition-colors ${tab === 'my' ? 'tab-active' : 'tab-inactive'}`;
+            filterAndRender();
+        }
+
+        function filterAndRender() {
+            let filtered = allReports;
+            if (currentFilter === 'my') {
+                filtered = allReports.filter(c => c.reporter === currentUser);
+            }
+            renderFeed(filtered);
+            renderMap(filtered);
+        }
+
         function renderFeed(reports) {
             const container = document.getElementById('feedList');
             container.innerHTML = '';
-            
+
             if (reports.length === 0) {
-                container.innerHTML = `
-                    <div class="flex flex-col items-center justify-center h-64 text-gray-400">
-                        <i class="fas fa-folder-open text-4xl mb-3 opacity-30"></i>
-                        <p>目前尚無通報案件</p>
-                    </div>`;
+                container.innerHTML = `<div class="flex flex-col items-center justify-center h-64 text-gray-400"><i class="fas fa-folder-open text-4xl mb-3 opacity-30"></i><p>這裡沒有案件</p></div>`;
                 return;
             }
 
             reports.forEach(report => {
-                // 狀態標籤
-                let statusBadge = report.status === 'Assigned' 
-                    ? '<span class="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded text-xs font-bold border border-yellow-200">維修中</span>' 
-                    : report.status === 'Completed' 
-                    ? '<span class="bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-bold border border-green-200">已結案</span>' 
-                    : '<span class="bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-bold border border-red-200">待處理</span>';
+                let statusBadge = report.status === 'in_progress' || report.status === 'verified'
+                    ? '<span class="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded text-xs font-bold border border-yellow-200">維修中</span>'
+                    : report.status === 'completed'
+                        ? '<span class="bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-bold border border-green-200">已結案</span>'
+                        : '<span class="bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-bold border border-red-200">待處理</span>';
 
-                // 地址顯示優先順序
-                let locationText = report.location || "未知地點";
-                
+                let myBadge = report.reporter === currentUser ? '<span class="text-[10px] bg-blue-50 text-blue-600 px-1 rounded border border-blue-100 ml-1">我</span>' : '';
+
                 const item = document.createElement('div');
                 item.className = "bg-white p-3 rounded-xl border border-gray-100 shadow-sm cursor-pointer card-hover transition-all flex gap-3 relative group";
                 item.onclick = () => focusCase(report, item);
 
                 item.innerHTML = `
                     <div class="w-24 h-24 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden relative border border-gray-200">
-                        <img src="${report.photoUrl}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" onerror="this.src='https://via.placeholder.com/150?text=無照片'">
+                        <img src="${report.imageUrl || 'https://via.placeholder.com/150?text=NoImage'}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
                     </div>
                     <div class="flex-1 flex flex-col justify-between py-0.5">
                         <div class="flex justify-between items-start">
-                            ${statusBadge}
+                            <div>${statusBadge}${myBadge}</div>
                             <span class="text-[10px] text-gray-400 font-medium">${new Date(report.createdAt).toLocaleDateString()}</span>
                         </div>
                         <h3 class="font-bold text-gray-800 text-sm line-clamp-2 mt-1 leading-snug">${report.description}</h3>
                         <div class="text-xs text-gray-500 mt-auto flex items-center gap-1.5 pt-2 border-t border-dashed border-gray-100">
                             <i class="fas fa-map-marker-alt text-red-400"></i>
-                            <span class="truncate w-40 font-medium text-gray-600">${locationText}</span>
+                            <span class="truncate w-40 font-medium text-gray-600">${report.latitude.toFixed(4)}, ${report.longitude.toFixed(4)}</span>
                         </div>
                     </div>
                 `;
@@ -219,75 +298,42 @@
             });
         }
 
-        // 5. 渲染地圖圖釘
         function renderMap(reports) {
             markersGroup.clearLayers();
             reports.forEach(report => {
-                // 優先使用新欄位 lat/lng
-                let lat = report.lat;
-                let lng = report.lng;
-                
-                // 相容舊資料
-                if (!lat || !lng) {
-                    const coords = parseCoordinates(report.location);
-                    if(coords) { lat = coords.lat; lng = coords.lng; }
-                }
+                let iconUrl = 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png';
+                if (report.status === 'completed') iconUrl = 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png';
+                else if (report.status === 'in_progress') iconUrl = 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-yellow.png';
 
-                if (lat && lng) {
-                    const redIcon = new L.Icon({
-                        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
-                        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-                        iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
-                    });
-                    
-                    const marker = L.marker([lat, lng], { icon: redIcon })
-                        .bindPopup(`
-                            <div class="w-[200px]">
-                                <img src="${report.photoUrl}" class="w-full h-32 object-cover rounded-lg mb-2">
-                                <p class="font-bold text-gray-800 text-sm mb-1">${report.description}</p>
-                                <p class="text-xs text-gray-500"><i class="fas fa-map-pin"></i> ${report.location}</p>
-                            </div>
-                        `);
-                    markersGroup.addLayer(marker);
-                }
+                const icon = new L.Icon({
+                    iconUrl: iconUrl,
+                    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                    iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+                });
+
+                L.marker([report.latitude, report.longitude], { icon: icon })
+                    .bindPopup(`<div class="w-[180px]"><img src="${report.imageUrl}" class="w-full h-24 object-cover rounded mb-2"><p class="font-bold text-sm">${report.description}</p></div>`)
+                    .addTo(markersGroup);
             });
         }
 
-        // 6. 互動功能
         map.on('click', async (e) => {
             const { lat, lng } = e.latlng;
             if (tempMarker) map.removeLayer(tempMarker);
             tempMarker = L.marker([lat, lng]).addTo(map);
-            
             document.getElementById('latInput').value = lat;
             document.getElementById('lngInput').value = lng;
             document.getElementById('locationInput').value = "📍 地址查詢中...";
-            
             openReportSheet();
-
-            // 呼叫 API 查中文地址
             const address = await getAddress(lat, lng);
             document.getElementById('locationInput').value = address;
         });
 
         function focusCase(report, element) {
-            let lat = report.lat;
-            let lng = report.lng;
-            if (!lat || !lng) {
-                const c = parseCoordinates(report.location);
-                if(c) { lat = c.lat; lng = c.lng; }
-            }
-
-            if (lat && lng) {
-                map.setView([lat, lng], 17);
-                // 高亮效果
-                document.querySelectorAll('#feedList > div').forEach(el => el.classList.remove('active-card'));
-                element.classList.add('active-card');
-                // 若在手機版，滾動地圖到可視區域
-                if(window.innerWidth < 768) {
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                }
-            }
+            map.setView([report.latitude, report.longitude], 17);
+            document.querySelectorAll('#feedList > div').forEach(el => el.classList.remove('active-card'));
+            element.classList.add('active-card');
+            if (window.innerWidth < 768) window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         async function submitReport() {
@@ -295,93 +341,38 @@
             const desc = document.getElementById('description').value;
             const lat = document.getElementById('latInput').value;
             const lng = document.getElementById('lngInput').value;
-            const address = document.getElementById('locationInput').value;
 
             if (!fileInput.files[0] || !lat) return alert("請拍攝照片並選點！");
-            
-            const btn = document.getElementById('submitBtn'); 
+            const btn = document.getElementById('submitBtn');
             const originalText = btn.innerText;
             btn.innerText = "資料上傳中..."; btn.disabled = true;
 
             try {
-                // 上傳照片
-                const formData = new FormData(); 
-                formData.append('image', fileInput.files[0]);
+                const formData = new FormData(); formData.append('image', fileInput.files[0]);
                 const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData });
                 const uploadData = await uploadRes.json();
 
-                // 建立案件
-                await fetch('/create_case', {
+                await fetch('/api/reports', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        description: desc,
-                        location: address, // 中文地址
-                        lat: lat,          // 數字座標
-                        lng: lng,
-                        photoUrl: uploadData.url
-                    })
+                    body: JSON.stringify({ description: desc, latitude: parseFloat(lat), longitude: parseFloat(lng), category: 'pothole', severity: 'normal', imageUrl: uploadData.url })
                 });
 
-                alert("✅ 報案成功！"); 
-                closeReportSheet();
-                
-                // 重置表單
-                document.getElementById('description').value = ''; 
+                alert("✅ 報案成功！"); closeReportSheet();
+                document.getElementById('description').value = '';
                 document.getElementById('imagePreview').classList.add('hidden');
                 document.getElementById('uploadPlaceholder').classList.remove('hidden');
-                if(tempMarker) map.removeLayer(tempMarker); 
-                
-                loadData(); // 重新整理列表
-
-            } catch (e) { alert("錯誤：" + e.message); } 
-            finally { btn.innerText = originalText; btn.disabled = false; }
+                if (tempMarker) map.removeLayer(tempMarker);
+                loadData();
+            } catch (e) { alert("錯誤：" + e.message); } finally { btn.innerText = originalText; btn.disabled = false; }
         }
 
-        // 面板與輔助函式
-        function openReportSheet() { 
-            const sheet = document.getElementById('reportSheet'); 
-            const content = document.getElementById('sheetContent');
-            sheet.classList.remove('hidden'); 
-            setTimeout(() => content.classList.remove('translate-y-full'), 10);
-        }
-        function closeReportSheet() { 
-            const sheet = document.getElementById('reportSheet'); 
-            const content = document.getElementById('sheetContent');
-            content.classList.add('translate-y-full'); 
-            setTimeout(() => sheet.classList.add('hidden'), 300);
-        }
-        function previewImage(input) {
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = function(e) { 
-                    document.getElementById('imagePreview').src = e.target.result; 
-                    document.getElementById('imagePreview').classList.remove('hidden'); 
-                    document.getElementById('uploadPlaceholder').classList.add('hidden'); 
-                }
-                reader.readAsDataURL(input.files[0]);
-            }
-        }
-        function parseCoordinates(str) { 
-            try { 
-                const clean = str.replace(/[^\d.,-]/g, ''); 
-                const parts = clean.split(','); 
-                if (parts.length === 2) return { lat: parseFloat(parts[0]), lng: parseFloat(parts[1]) }; 
-            } catch(e) {} return null; 
-        }
-        function locateUser() { 
-            if(navigator.geolocation) { 
-                navigator.geolocation.getCurrentPosition(pos => { 
-                    const { latitude, longitude } = pos.coords; 
-                    if(userMarker) map.removeLayer(userMarker); 
-                    userMarker = L.circleMarker([latitude, longitude], { radius: 8, fillColor: "#2563eb", color: "#fff", fillOpacity: 1 }).addTo(map); 
-                    map.setView([latitude, longitude], 16); 
-                }, () => alert("定位失敗，請確保使用 HTTPS 或 Localhost")); 
-            } 
-        }
+        function openReportSheet() { document.getElementById('reportSheet').classList.remove('hidden'); setTimeout(() => document.getElementById('sheetContent').classList.remove('translate-y-full'), 10); }
+        function closeReportSheet() { document.getElementById('sheetContent').classList.add('translate-y-full'); setTimeout(() => document.getElementById('reportSheet').classList.add('hidden'), 300); }
+        function previewImage(input) { if (input.files && input.files[0]) { const reader = new FileReader(); reader.onload = function (e) { document.getElementById('imagePreview').src = e.target.result; document.getElementById('imagePreview').classList.remove('hidden'); document.getElementById('uploadPlaceholder').classList.add('hidden'); }; reader.readAsDataURL(input.files[0]); } }
+        function locateUser() { if (navigator.geolocation) { navigator.geolocation.getCurrentPosition(pos => { const { latitude, longitude } = pos.coords; if (userMarker) map.removeLayer(userMarker); userMarker = L.circleMarker([latitude, longitude], { radius: 8, fillColor: "#2563eb", color: "#fff", fillOpacity: 1 }).addTo(map); map.setView([latitude, longitude], 16); }, () => alert("定位失敗，請確保使用 HTTPS 或 Localhost")); } }
 
-        // 啟動程式
-        loadData(); 
-        locateUser();
+        loadData(); locateUser();
     </script>
 </body>
+
 </html>

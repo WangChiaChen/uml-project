@@ -12,7 +12,6 @@ mimetypes.add_type('application/javascript', '.js')
 mimetypes.add_type('text/css', '.css')
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
-# 設定 Session 密鑰
 app.secret_key = secrets.token_hex(16) 
 
 # 初始化 Firebase
@@ -23,12 +22,43 @@ if not firebase_admin._apps:
 db = firestore.client()
 
 # ==========================================
+#  🛠️ 核心輔助函式：資料格式轉換 (翻譯機)
+# ==========================================
+def format_case(doc):
+    data = doc.to_dict()
+    
+    # 處理時間：如果是 Datetime 物件轉字串，如果沒有則用現在時間
+    created_at = data.get('createdAt') or data.get('reportTime')
+    if isinstance(created_at, datetime.datetime):
+        created_at = created_at.isoformat()
+    
+    return {
+        "id": doc.id,
+        # 1. 座標轉換：前端要 latitude/longitude，資料庫可能存 lat/lng
+        "latitude": data.get('latitude') or data.get('lat') or 24.1446, 
+        "longitude": data.get('longitude') or data.get('lng') or 120.6839,
+        
+        # 2. 欄位補全：確保欄位不為空
+        "description": data.get('description', '無描述'),
+        "category": data.get('category', 'other'),
+        "severity": data.get('severity', 'normal'),
+        "status": data.get('status', 'pending'),
+        
+        # 3. 圖片轉換：前端要 imageUrl，資料庫可能存 photoUrl
+        "imageUrl": data.get('imageUrl') or data.get('photoUrl') or '',
+        
+        # 4. 報案人轉換：前端要 reporter，資料庫存 memberId
+        "reporter": data.get('reporter') or data.get('memberId') or '訪客',
+        
+        "createdAt": created_at or datetime.datetime.now().isoformat()
+    }
+
+# ==========================================
 #  1. 頁面路由
 # ==========================================
 
 @app.route('/')
 def index():
-    # ⭐️ 關鍵修改：將登入的使用者名稱傳給前端
     user = session.get('user') 
     return render_template('index.html', username=user)
 
@@ -40,6 +70,16 @@ def dashboard():
 @app.route('/login')
 def login_page():
     return render_template('login.html')
+
+@app.route('/admin')
+def admin_page():
+    if 'user' not in session: return redirect('/login')
+    return render_template('admin.html')
+
+@app.route('/crew')
+def crew_page():
+    if 'user' not in session: return redirect('/login')
+    return render_template('crew.html')
 
 # ==========================================
 #  2. 使用者認證 API
@@ -96,33 +136,49 @@ def get_reports():
         except Exception:
             docs = db.collection('cases').stream()
         
-        reports = []
-        for doc in docs:
-            data = doc.to_dict()
-            data['id'] = doc.id
-            reports.append(data)
+        # ⭐️ 這裡使用 format_case 函式來統一格式
+        reports = [format_case(doc) for doc in docs]
+        
         return jsonify(reports), 200
     except Exception as e: return jsonify({"error": str(e)}), 500
 
-@app.route('/create_case', methods=['POST'])
+@app.route('/api/reports', methods=['POST']) # 支援前端的 POST 路徑
+@app.route('/create_case', methods=['POST']) # 支援舊的路徑
 def create_case():
     try:
         data = request.json
-        # 分開儲存：地址 (字串) 與 座標 (數字)
+        # 統一儲存格式 (配合前端需求)
         new_case = {
             'description': data.get('description'),
-            'location': data.get('location'), # 中文地址
-            'lat': data.get('lat'),
-            'lng': data.get('lng'),
-            'photoUrl': data.get('photoUrl'),
-            'memberId': session.get('user', '匿名熱心民眾'),
-            'status': 'New',
+            'category': data.get('category', 'other'),
+            'severity': data.get('severity', 'normal'),
+            'latitude': data.get('latitude') or data.get('lat'),   # 存 latitude
+            'longitude': data.get('longitude') or data.get('lng'), # 存 longitude
+            'imageUrl': data.get('imageUrl') or data.get('photoUrl'), # 存 imageUrl
+            'reporter': session.get('user', '訪客'), # 存 reporter
+            'memberId': session.get('user', '訪客'), # 保留舊欄位以防萬一
+            'status': 'pending',
             'createdAt': datetime.datetime.now().isoformat()
         }
         
         doc_ref = db.collection('cases').document()
         doc_ref.set(new_case)
-        return jsonify({"success": True, "caseID": doc_ref.id}), 200
+        return jsonify({"success": True, "id": doc_ref.id, "caseID": doc_ref.id}), 200
+    except Exception as e: return jsonify({"error": str(e)}), 500
+
+@app.route('/api/reports/<case_id>/status', methods=['PATCH'])
+def update_status(case_id):
+    try:
+        data = request.json
+        updates = {
+            'status': data.get('status'),
+            'updatedAt': datetime.datetime.now().isoformat()
+        }
+        if data.get('afterImageUrl'):
+            updates['afterImageUrl'] = data.get('afterImageUrl')
+
+        db.collection('cases').document(case_id).update(updates)
+        return jsonify({"success": True}), 200
     except Exception as e: return jsonify({"error": str(e)}), 500
 
 @app.route('/api/upload', methods=['POST'])
@@ -130,30 +186,42 @@ def upload_file():
     try:
         upload_folder = os.path.join(app.static_folder, 'uploads')
         if not os.path.exists(upload_folder): os.makedirs(upload_folder)
+        
+        if 'image' not in request.files:
+            return jsonify({"error": "No file part"}), 400
+            
         file = request.files['image']
+        if file.filename == '':
+            return jsonify({"error": "No selected file"}), 400
+            
         if file:
             filename = f"{datetime.datetime.now().timestamp()}_{file.filename}"
             file.save(os.path.join(upload_folder, filename))
             return jsonify({"url": f"/static/uploads/{filename}"}), 200
     except Exception as e: return jsonify({"error": str(e)}), 500
 
-# 後台功能
+# 兼容舊後台 API (Assign Task)
 @app.route('/assign_task', methods=['POST'])
 def assign_task():
     try:
         data = request.json
         db.collection('cases').document(data.get('caseID')).update({
-            'status': 'Assigned', 'dedicatedUnitID': data.get('dedicatedUnitID'), 'updatedAt': datetime.datetime.now().isoformat()
+            'status': 'in_progress', # 對應前端的 in_progress
+            'dedicatedUnitID': data.get('dedicatedUnitID'),
+            'updatedAt': datetime.datetime.now().isoformat()
         })
         return jsonify({"success": True}), 200
     except Exception as e: return jsonify({"error": str(e)}), 500
 
+# 兼容舊後台 API (Process Case)
 @app.route('/process_case', methods=['POST'])
 def process_case():
     try:
         data = request.json
         db.collection('cases').document(data.get('caseID')).update({
-            'status': 'Completed', 'resultDetails': data.get('resultDetails'), 'completedAt': datetime.datetime.now().isoformat()
+            'status': 'completed', # 對應前端的 completed
+            'resultDetails': data.get('resultDetails'),
+            'completedAt': datetime.datetime.now().isoformat()
         })
         return jsonify({"success": True}), 200
     except Exception as e: return jsonify({"error": str(e)}), 500
