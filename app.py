@@ -34,27 +34,17 @@ def format_case(doc):
     
     return {
         "id": doc.id,
-        # 1. 座標轉換：前端要 latitude/longitude，資料庫可能存 lat/lng
         "latitude": data.get('latitude') or data.get('lat') or 24.1446, 
         "longitude": data.get('longitude') or data.get('lng') or 120.6839,
-        
-        # 2. 欄位補全：確保欄位不為空
         "description": data.get('description', '無描述'),
         "category": data.get('category', 'other'),
         "severity": data.get('severity', 'normal'),
         "status": data.get('status', 'pending'),
-        
-        # 3. 圖片轉換：前端要 imageUrl，資料庫可能存 photoUrl
         "imageUrl": data.get('imageUrl') or data.get('photoUrl') or '',
-        
-        # 4. 報案人轉換：前端要 reporter，資料庫存 memberId
         "reporter": data.get('reporter') or data.get('memberId') or '訪客',
-        
         "createdAt": created_at or datetime.datetime.now().isoformat(),
-
-        # 5. ⭐️ 新增：評分與回饋欄位
-        "rating": data.get('rating', 0),        # 評分 (1-5)
-        "feedback": data.get('feedback', '')    # 文字回饋
+        "rating": data.get('rating', 0),
+        "feedback": data.get('feedback', '')
     }
 
 # ==========================================
@@ -77,27 +67,23 @@ def login_page():
 
 @app.route('/admin')
 def admin_page():
-    # 1. 先檢查有沒有登入
+    # 權限檢查：只限 333
     if 'user' not in session:
         return redirect('/login')
     
-    # 2. 檢查登入的人是不是 '333'
     if session['user'] != '333':
-        # 如果不是，就顯示錯誤訊息
         return "<h1>⛔ 權限不足：您不是管理員</h1><p>此頁面僅限帳號 333 訪問</p><a href='/'>回首頁</a>", 403
         
     return render_template('admin.html')
 
 @app.route('/crew')
 def crew_page():
-    # 1. 先檢查有沒有登入
+    # 權限檢查：只限 444
     if 'user' not in session:
         return redirect('/login')
 
-    # 2. 檢查登入的人是不是 '333'
-    if session['user'] != '333':
-        # 如果不是，就顯示錯誤訊息
-        return "<h1>⛔ 權限不足：您不是維修人員</h1><p>此頁面僅限帳號 333 訪問</p><a href='/'>回首頁</a>", 403
+    if session['user'] != '444':
+        return "<h1>⛔ 權限不足：您不是維修人員</h1><p>此頁面僅限帳號 444 訪問</p><a href='/'>回首頁</a>", 403
 
     return render_template('crew.html')
 
@@ -116,8 +102,12 @@ def register():
             return jsonify({"error": "帳號已存在"}), 400
         
         hashed_password = generate_password_hash(password)
+        # 預設 isSuspended 為 False
         users_ref.document().set({
-            'username': username, 'password': hashed_password, 'createdAt': datetime.datetime.now()
+            'username': username, 
+            'password': hashed_password, 
+            'createdAt': datetime.datetime.now(),
+            'isSuspended': False
         })
         return jsonify({"success": True}), 200
     except Exception as e: return jsonify({"error": str(e)}), 500
@@ -129,14 +119,25 @@ def login():
         username = data.get('username')
         password = data.get('password')
         users_ref = db.collection('users')
+        
+        # 查詢使用者
         query = users_ref.where('username', '==', username).stream()
         user_doc = None
-        for doc in query: user_doc = doc.to_dict(); break
+        
+        for doc in query: 
+            user_doc = doc.to_dict()
+            # 將 ID 存起來備用，雖然這裡暫時用不到
+            break
         
         if user_doc and check_password_hash(user_doc['password'], password):
+            # 🛑 檢查是否被停權
+            if user_doc.get('isSuspended', False) is True:
+                return jsonify({"error": "此帳號已被停權，請聯繫管理員"}), 403
+
             session['user'] = username
             return jsonify({"success": True}), 200
-        else: return jsonify({"error": "帳號或密碼錯誤"}), 401
+        else: 
+            return jsonify({"error": "帳號或密碼錯誤"}), 401
     except Exception as e: return jsonify({"error": str(e)}), 500
 
 @app.route('/logout')
@@ -156,9 +157,7 @@ def get_reports():
         except Exception:
             docs = db.collection('cases').stream()
         
-        # 使用 format_case 函式來統一格式
         reports = [format_case(doc) for doc in docs]
-        
         return jsonify(reports), 200
     except Exception as e: return jsonify({"error": str(e)}), 500
 
@@ -167,7 +166,6 @@ def get_reports():
 def create_case():
     try:
         data = request.json
-        # 統一儲存格式
         new_case = {
             'description': data.get('description'),
             'category': data.get('category', 'other'),
@@ -201,7 +199,6 @@ def update_status(case_id):
         return jsonify({"success": True}), 200
     except Exception as e: return jsonify({"error": str(e)}), 500
 
-# ⭐️ 新增：使用者評分與回饋 API
 @app.route('/api/reports/<case_id>/feedback', methods=['POST'])
 def submit_feedback(case_id):
     try:
@@ -212,7 +209,6 @@ def submit_feedback(case_id):
         if not rating:
             return jsonify({"error": "請選擇評分星星"}), 400
 
-        # 更新資料庫，加入評分資訊
         db.collection('cases').document(case_id).update({
             'rating': int(rating),
             'feedback': feedback,
@@ -242,7 +238,7 @@ def upload_file():
             return jsonify({"url": f"/static/uploads/{filename}"}), 200
     except Exception as e: return jsonify({"error": str(e)}), 500
 
-# 兼容舊後台 API (Assign Task)
+# 兼容舊後台 API
 @app.route('/assign_task', methods=['POST'])
 def assign_task():
     try:
@@ -255,7 +251,6 @@ def assign_task():
         return jsonify({"success": True}), 200
     except Exception as e: return jsonify({"error": str(e)}), 500
 
-# 兼容舊後台 API (Process Case)
 @app.route('/process_case', methods=['POST'])
 def process_case():
     try:
@@ -265,6 +260,50 @@ def process_case():
             'resultDetails': data.get('resultDetails'),
             'completedAt': datetime.datetime.now().isoformat()
         })
+        return jsonify({"success": True}), 200
+    except Exception as e: return jsonify({"error": str(e)}), 500
+
+# ==========================================
+#  4. 管理員帳號管理 API (新增)
+# ==========================================
+
+@app.route('/api/admin/users', methods=['GET'])
+def get_all_users():
+    # 安全檢查：只有 333 可以看
+    if session.get('user') != '333':
+        return jsonify({"error": "權限不足"}), 403
+        
+    try:
+        users = []
+        docs = db.collection('users').stream()
+        for doc in docs:
+            u = doc.to_dict()
+            users.append({
+                "id": doc.id,
+                "username": u.get('username'),
+                "createdAt": u.get('createdAt'),
+                "isSuspended": u.get('isSuspended', False)
+            })
+        return jsonify(users), 200
+    except Exception as e: return jsonify({"error": str(e)}), 500
+
+@app.route('/api/admin/users/suspend', methods=['POST'])
+def suspend_user():
+    # 安全檢查：只有 333 可以操作
+    if session.get('user') != '333':
+        return jsonify({"error": "權限不足"}), 403
+
+    try:
+        data = request.json
+        user_id = data.get('userId')
+        action = data.get('action') # 'suspend' or 'restore'
+        
+        is_suspended = True if action == 'suspend' else False
+        
+        db.collection('users').document(user_id).update({
+            'isSuspended': is_suspended
+        })
+        
         return jsonify({"success": True}), 200
     except Exception as e: return jsonify({"error": str(e)}), 500
 
