@@ -58,45 +58,65 @@
                 return;
             }
             tasks.forEach(r => {
+                // 判斷當前狀態
+                const isNew = r.status === 'verified';
+
+                // 狀態標籤
+                const statusBadge = isNew
+                    ? `<span class="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-1 rounded">新指派</span>`
+                    : `<span class="bg-yellow-100 text-yellow-700 text-xs font-bold px-2 py-1 rounded animate-pulse">施工中</span>`;
+
+                // 操作按鈕：如果是新指派顯示「開始維修」，如果是施工中顯示「完工」
+                const actionBtn = isNew
+                    ? `<button onclick="updateTaskStatus('${r.id}', 'in_progress')" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2">
+                 <i class="fas fa-tools"></i> 開始維修
+               </button>`
+                    : `<button onclick="updateTaskStatus('${r.id}', 'completed')" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2">
+                 <i class="fas fa-check-circle"></i> 完工回報
+               </button>`;
+
                 const html = `
-                    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                        <div class="flex flex-col sm:flex-row">
-                            <div class="w-full sm:w-40 h-40 sm:h-auto bg-gray-100 flex-shrink-0">
-                                <img src="${r.imageUrl}" class="w-full h-full object-cover" onerror="this.src='https://via.placeholder.com/200?text=No+Image'">
-                            </div>
-                            <div class="p-5 flex-1">
-                                <div class="flex justify-between items-start mb-2">
-                                    <span class="bg-yellow-100 text-yellow-700 text-xs font-bold px-2 py-1 rounded">維修中</span>
-                                    <span class="text-xs text-gray-400">ID: ${r.id.slice(0, 6)}</span>
-                                </div>
-                                <h3 class="font-bold text-lg text-gray-800 mb-1">${r.description}</h3>
-                                <p class="text-sm text-gray-500 mb-4"><i class="fas fa-map-marker-alt mr-1"></i> ${r.latitude}, ${r.longitude}</p>
-                                <div class="flex gap-3">
-                                    <a href="https://www.google.com/maps/search/?api=1&query=${r.latitude},${r.longitude}" target="_blank" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 rounded-lg text-sm font-bold transition-colors text-center flex items-center justify-center gap-2">
-                                        <i class="fas fa-location-arrow"></i> 導航
-                                    </a>
-                                    <button onclick="completeTask('${r.id}')" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2">
-                                        <i class="fas fa-check-circle"></i> 完工回報
-                                    </button>
-                                </div>
-                            </div>
+            <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                <div class="flex flex-col sm:flex-row">
+                    <div class="w-full sm:w-40 h-40 sm:h-auto bg-gray-100 flex-shrink-0">
+                        <img src="${r.imageUrl}" class="w-full h-full object-cover" onerror="this.src='https://via.placeholder.com/200?text=No+Image'">
+                    </div>
+                    <div class="p-5 flex-1">
+                        <div class="flex justify-between items-start mb-2">
+                            ${statusBadge}
+                            <span class="text-xs text-gray-400">ID: ${r.id.slice(0, 6)}</span>
+                        </div>
+                        <h3 class="font-bold text-lg text-gray-800 mb-1">${r.description}</h3>
+                        <p class="text-sm text-gray-500 mb-4"><i class="fas fa-map-marker-alt mr-1"></i> ${r.latitude.toFixed(5)}, ${r.longitude.toFixed(5)}</p>
+                        <div class="flex gap-3">
+                            <a href="https://www.google.com/maps/dir/?api=1&destination=${r.latitude},${r.longitude}" target="_blank" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 rounded-lg text-sm font-bold transition-colors text-center flex items-center justify-center gap-2">
+                                <i class="fas fa-location-arrow"></i> 導航
+                            </a>
+                            ${actionBtn}
                         </div>
                     </div>
-                `;
+                </div>
+            </div>
+        `;
                 container.innerHTML += html;
             });
         }
 
-        async function completeTask(id) {
-            // 這裡可以擴充上傳完工照片的功能，目前先簡化為直接結案
-            if (!confirm('確定已完工並結案嗎？')) return;
+        // 同時將原本的 completeTask 函式改名並通用化
+        async function updateTaskStatus(id, newStatus) {
+            const msg = newStatus === 'in_progress' ? "確定開始施工嗎？用戶將看到狀態變更。" : "確定已完工並結案嗎？";
+            if (!confirm(msg)) return;
+
             try {
                 await fetch(`/api/reports/${id}/status`, {
-                    method: 'PATCH',
+                    method: 'PATCH', // 注意這裡是用我們在 app.py 寫好的 PATCH API
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ status: 'completed' })
+                    body: JSON.stringify({ status: newStatus })
                 });
-                alert("辛苦了！案件已結案。");
+
+                if (newStatus === 'completed') alert("辛苦了！案件已結案。");
+                else alert("狀態已更新為施工中！");
+
                 loadTasks();
             } catch (e) { alert("操作失敗"); }
         }
