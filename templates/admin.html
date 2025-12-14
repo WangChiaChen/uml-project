@@ -9,9 +9,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-        }
+        body { font-family: 'Inter', sans-serif; }
+        .tab-active { border-bottom: 2px solid #2563eb; color: #2563eb; font-weight: bold; }
+        .tab-inactive { border-bottom: 2px solid transparent; color: #6b7280; }
     </style>
 </head>
 
@@ -19,37 +19,89 @@
 
     <nav class="bg-white border-b border-gray-200 px-4 py-3 flex justify-between items-center sticky top-0 z-50">
         <div class="flex items-center gap-3">
-            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white"><i
-                    class="fas fa-shield-alt"></i></div>
-            <h1 class="font-bold text-lg text-gray-800">管理後台</h1>
+            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white">
+                <i class="fas fa-shield-alt"></i>
+            </div>
+            <h1 class="font-bold text-lg text-gray-800">系統管理後台</h1>
         </div>
-        <a href="/" class="text-sm font-medium text-gray-500 hover:text-blue-600"><i class="fas fa-arrow-left mr-1"></i>
-            回首頁</a>
+        <a href="/" class="text-sm font-medium text-gray-500 hover:text-blue-600">
+            <i class="fas fa-arrow-left mr-1"></i> 回首頁
+        </a>
     </nav>
 
-    <div class="container mx-auto max-w-3xl p-4">
-        <div class="flex justify-between items-center mb-6">
-            <h2 class="text-xl font-bold text-gray-800">待審核案件</h2>
-            <button onclick="loadReports()" class="text-blue-600 hover:text-blue-800 text-sm font-medium"><i
-                    class="fas fa-sync mr-1"></i> 重新整理</button>
+    <div class="container mx-auto max-w-4xl p-4">
+        
+        <div class="flex border-b border-gray-200 mb-6">
+            <button onclick="switchTab('reports')" id="btn-reports" class="flex-1 py-3 text-center transition-colors tab-active">
+                <i class="fas fa-clipboard-list mr-2"></i>待審核案件
+            </button>
+            <button onclick="switchTab('users')" id="btn-users" class="flex-1 py-3 text-center transition-colors tab-inactive">
+                <i class="fas fa-users-cog mr-2"></i>帳號管理
+            </button>
         </div>
 
-        <div id="adminList" class="space-y-4">
-            <div class="text-center py-10 text-gray-400">載入中...</div>
+        <div id="view-reports" class="block">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-bold text-gray-700">案件列表</h2>
+                <button onclick="loadReports()" class="text-blue-600 hover:text-blue-800 text-sm font-medium"><i class="fas fa-sync mr-1"></i> 重新整理</button>
+            </div>
+            <div id="adminList" class="space-y-4">
+                <div class="text-center py-10 text-gray-400">載入中...</div>
+            </div>
         </div>
+
+        <div id="view-users" class="hidden">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-bold text-gray-700">會員列表</h2>
+                <button onclick="loadUsers()" class="text-blue-600 hover:text-blue-800 text-sm font-medium"><i class="fas fa-sync mr-1"></i> 重新整理</button>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <table class="w-full text-sm text-left text-gray-500">
+                    <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3">帳號</th>
+                            <th class="px-6 py-3">註冊時間</th>
+                            <th class="px-6 py-3">狀態</th>
+                            <th class="px-6 py-3">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="userListBody">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+
     </div>
 
     <script>
+        // --- 頁籤切換邏輯 ---
+        function switchTab(tab) {
+            if (tab === 'reports') {
+                document.getElementById('view-reports').classList.remove('hidden');
+                document.getElementById('view-users').classList.add('hidden');
+                document.getElementById('btn-reports').className = "flex-1 py-3 text-center transition-colors tab-active";
+                document.getElementById('btn-users').className = "flex-1 py-3 text-center transition-colors tab-inactive";
+                loadReports();
+            } else {
+                document.getElementById('view-reports').classList.add('hidden');
+                document.getElementById('view-users').classList.remove('hidden');
+                document.getElementById('btn-reports').className = "flex-1 py-3 text-center transition-colors tab-inactive";
+                document.getElementById('btn-users').className = "flex-1 py-3 text-center transition-colors tab-active";
+                loadUsers();
+            }
+        }
+
+        // --- 1. 案件功能 ---
         async function loadReports() {
             try {
                 const res = await fetch('/api/reports');
                 const data = await res.json();
                 const pending = data.filter(r => r.status === 'pending');
-                render(pending);
-            } catch (e) { alert("載入失敗"); }
+                renderReports(pending);
+            } catch (e) { alert("案件載入失敗"); }
         }
 
-        function render(reports) {
+        function renderReports(reports) {
             const container = document.getElementById('adminList');
             container.innerHTML = '';
             if (reports.length === 0) {
@@ -68,18 +120,12 @@
                                 <span class="text-xs text-gray-400">${new Date(r.createdAt).toLocaleString()}</span>
                             </div>
                             <h3 class="font-bold text-lg text-gray-800 mb-1">${r.description}</h3>
-                            <p class="text-sm text-gray-500 mb-4 flex items-center gap-1"><i class="fas fa-map-marker-alt"></i> ${r.latitude.toFixed(5)}, ${r.longitude.toFixed(5)}</p>
+                            <p class="text-sm text-gray-500 mb-4"><i class="fas fa-map-marker-alt"></i> ${r.latitude.toFixed(5)}, ${r.longitude.toFixed(5)}</p>
                             
                             <div class="mt-auto flex gap-3 pt-4 border-t border-gray-100">
-                                <button onclick="updateStatus('${r.id}', 'verified')" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm font-bold transition-colors">
-                                    <i class="fas fa-check mr-1"></i> 核准
-                                </button>
-                                <button onclick="updateStatus('${r.id}', 'in_progress')" class="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white py-2 rounded-lg text-sm font-bold transition-colors">
-                                    <i class="fas fa-tools mr-1"></i> 指派維修
-                                </button>
-                                <button onclick="updateStatus('${r.id}', 'rejected')" class="flex-1 bg-red-100 hover:bg-red-200 text-red-600 py-2 rounded-lg text-sm font-bold transition-colors">
-                                    <i class="fas fa-times mr-1"></i> 駁回
-                                </button>
+                                <button onclick="updateStatus('${r.id}', 'verified')" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm font-bold transition-colors"><i class="fas fa-check"></i> 核准</button>
+                                <button onclick="updateStatus('${r.id}', 'in_progress')" class="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white py-2 rounded-lg text-sm font-bold transition-colors"><i class="fas fa-tools"></i> 維修</button>
+                                <button onclick="updateStatus('${r.id}', 'rejected')" class="flex-1 bg-red-100 hover:bg-red-200 text-red-600 py-2 rounded-lg text-sm font-bold transition-colors"><i class="fas fa-times"></i> 駁回</button>
                             </div>
                         </div>
                     </div>
@@ -100,6 +146,66 @@
             } catch (e) { alert("更新失敗"); }
         }
 
+        // --- 2. 用戶管理功能 ---
+        async function loadUsers() {
+            try {
+                const res = await fetch('/api/admin/users');
+                const users = await res.json();
+                renderUsers(users);
+            } catch (e) { console.error(e); alert("用戶列表載入失敗 (可能權限不足)"); }
+        }
+
+        function renderUsers(users) {
+            const tbody = document.getElementById('userListBody');
+            tbody.innerHTML = '';
+            
+            users.forEach(u => {
+                // 不顯示管理員自己 (333)，避免誤刪自己
+                if(u.username === '333') return;
+
+                const isSuspended = u.isSuspended;
+                const statusBadge = isSuspended 
+                    ? `<span class="bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded border border-red-200">停權中</span>`
+                    : `<span class="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded border border-green-200">正常</span>`;
+                
+                // 根據狀態決定按鈕
+                const btnAction = isSuspended
+                    ? `<button onclick="toggleSuspend('${u.id}', 'restore')" class="text-green-600 hover:text-green-900 font-bold border border-green-600 px-3 py-1 rounded text-xs hover:bg-green-50 transition-colors">解除停權</button>`
+                    : `<button onclick="toggleSuspend('${u.id}', 'suspend')" class="text-red-600 hover:text-red-900 font-bold border border-red-600 px-3 py-1 rounded text-xs hover:bg-red-50 transition-colors">停權帳號</button>`;
+
+                const row = `
+                    <tr class="bg-white border-b hover:bg-gray-50">
+                        <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">${u.username}</td>
+                        <td class="px-6 py-4">${new Date(u.createdAt).toLocaleDateString()}</td>
+                        <td class="px-6 py-4">${statusBadge}</td>
+                        <td class="px-6 py-4">${btnAction}</td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        async function toggleSuspend(userId, action) {
+            const msg = action === 'suspend' ? "確定要【停權】此帳號嗎？他將無法登入。" : "確定要【解除停權】嗎？";
+            if (!confirm(msg)) return;
+
+            try {
+                const res = await fetch('/api/admin/users/suspend', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId, action })
+                });
+                
+                if (res.ok) {
+                    alert("操作成功！");
+                    loadUsers(); // 重新整理列表
+                } else {
+                    alert("操作失敗");
+                }
+            } catch (e) { alert("連線錯誤"); }
+        }
+
+        // 初始載入案件
         loadReports();
     </script>
 </body>
