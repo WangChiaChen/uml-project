@@ -7,6 +7,18 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import firebase_admin
 from firebase_admin import credentials, firestore
 
+# --- 新增 Cloudinary import ---
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
+
+# --- 設定 Cloudinary (請去 Cloudinary Dashboard 複製你的資訊) ---
+cloudinary.config( 
+  cloud_name = "dm8ghtdnw", 
+  api_key = "491181423841647", 
+  api_secret = "UwZsq6Q8PahrTwiSSaIxIL-fKfw" 
+)
+
 # --- 1. 初始化設定 ---
 mimetypes.add_type('application/javascript', '.js')
 mimetypes.add_type('text/css', '.css')
@@ -222,21 +234,29 @@ def submit_feedback(case_id):
 @app.route('/api/upload', methods=['POST'])
 def upload_file():
     try:
-        upload_folder = os.path.join(app.static_folder, 'uploads')
-        if not os.path.exists(upload_folder): os.makedirs(upload_folder)
-        
+        # 檢查是否有檔案
         if 'image' not in request.files:
             return jsonify({"error": "No file part"}), 400
             
         file = request.files['image']
+        
         if file.filename == '':
             return jsonify({"error": "No selected file"}), 400
             
         if file:
-            filename = f"{datetime.datetime.now().timestamp()}_{file.filename}"
-            file.save(os.path.join(upload_folder, filename))
-            return jsonify({"url": f"/static/uploads/{filename}"}), 200
-    except Exception as e: return jsonify({"error": str(e)}), 500
+            # --- 修改重點：直接上傳到 Cloudinary ---
+            # Cloudinary 會自動處理檔案串流，不需要先存到本地
+            upload_result = cloudinary.uploader.upload(file)
+            
+            # 取得安全的 HTTPS 網址
+            image_url = upload_result.get('secure_url')
+            
+            # 回傳格式保持與原本一樣，這樣前端 index.html 不用改
+            return jsonify({"url": image_url}), 200
+
+    except Exception as e:
+        print(f"上傳錯誤: {e}")
+        return jsonify({"error": str(e)}), 500
 
 # 兼容舊後台 API
 @app.route('/assign_task', methods=['POST'])
